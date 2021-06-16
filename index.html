@@ -10,47 +10,123 @@
   <link rel="stylesheet" href="plugin/bootstrap-4.6.0/css/bootstrap.min.css">
   <script src="plugin/bootstrap-4.6.0/js/bootstrap.bundle.min.js"></script>
   <title>Interview Yi Space x Countries Information</title>
+  <style>
+    table.dataTable thead tr th,
+    table.dataTable tbody tr td {
+      vertical-align: middle;
+    }
+  </style>
 </head>
 <body>
 <script>
-  // 選擇 物流廠商
-  function getListData() {
+  function getURLParameter(sParam) {
+    const sPageURL = window.location.search.substring(1);
+    const sURLVariables = sPageURL.split('&');
+    for (let i = 0; i < sURLVariables.length; i++) {
+      const sParameterName = sURLVariables[i].split('=');
+      if (sParameterName[0] === sParam) {
+        return sParameterName[1];
+      }
+    }
+  }
+
+  // 取得 列表資料
+  function getData() {
 
     const deferAjax = ajaxRestCountries();
 
-    const dataLoading = $('div.dataLoading');
-
-    const dataTable = $('table.dataTable');
+    const divLoading = $('div.Loading');
+    const divFailure = $('div.Failure');
+    const divContainer = $('div.Container');
 
     $.when(deferAjax).then(
       // resolve
       function (response) {
-        dataLoading.addClass('d-none');
-        dataTable.removeClass('d-none');
-        const dataTableTbody = dataTable.find('tbody');
+
+        // 資料計數
+        let dataCount = 0;
+
+        // 資料筆數
+        let dataCountTotal = response.length;
+
+        // 資料每頁筆數
+        const dataPerPage = 25;
+
+        // 資料總頁數
+        const dataPageTotal = Math.ceil(dataCountTotal / dataPerPage);
+
+        // 目前頁數
+        let dataCurrentPage = getURLParameter('page');
+        if (typeof dataCurrentPage === "undefined") {
+          dataCurrentPage = 1
+        } else {
+          dataCurrentPage = parseInt(dataCurrentPage);
+          if (isNaN(dataCurrentPage) || dataCurrentPage < 1) {
+            dataCurrentPage = 1
+          }
+        }
+        // 資料起始
+        let dataStart = dataCurrentPage;
+        if (dataCurrentPage === 1) {
+          dataStart = 1
+        } else {
+          dataStart = dataPerPage * (dataCurrentPage - 1) + 1;
+        }
+        // 資料結束
+        const dataClose = dataStart + dataPerPage - 1;
+
+        // todo 資料排序
+        // response = response.sort();
+        // response = response.reverse();
+
         let dataTableTbodyContent = null;
-        // console.log(dataTableTbody);
-        // console.log(response);
+
         $.each(response, function (index, json) {
-          // console.log("#" + json.week + ", period: " + json.start + " to " + json.end);
-          console.log(index);
-          console.log(json);
-          dataTableTbodyContent += '<tr class="data">';
-          dataTableTbodyContent += '  <td>' + index + '</td>';
-          dataTableTbodyContent += '  <td><img width="50" src="' + json.flag + '"></td>';
-          dataTableTbodyContent += '  <td>' + json.name + '</td>';
-          dataTableTbodyContent += '  <td>' + json.alpha2Code + '</td>';
-          dataTableTbodyContent += '  <td>' + json.alpha3Code + '</td>';
-          dataTableTbodyContent += '  <td>' + json.nativeName + '</td>';
-          dataTableTbodyContent += '  <td>' + json.altSpellings + '</td>';
-          dataTableTbodyContent += '  <td>' + json.callingCodes + '</td>';
-          dataTableTbodyContent += '</tr>';
+          dataCount++;
+          if (dataCount >= dataStart && dataCount <= dataClose) {
+            dataTableTbodyContent += '<tr class="data">';
+            dataTableTbodyContent += '  <td>' + dataCount + '</td>';
+            dataTableTbodyContent += '  <td><img alt="flag" width="50" src="' + json.flag + '"></td>';
+            dataTableTbodyContent += '  <td>' + json.name + '</td>';
+            dataTableTbodyContent += '  <td>' + json.alpha2Code + '</td>';
+            dataTableTbodyContent += '  <td>' + json.alpha3Code + '</td>';
+            dataTableTbodyContent += '  <td>' + json.nativeName + '</td>';
+            dataTableTbodyContent += '  <td>' + json.altSpellings + '</td>';
+            dataTableTbodyContent += '  <td>' + json.callingCodes + '</td>';
+            dataTableTbodyContent += '</tr>';
+          } else if (dataCount > dataClose) {
+            return false;
+          }
         });
-        dataTableTbody.html(dataTableTbodyContent)
+
+        // 第一頁不能在按上一頁 button
+        if (dataCurrentPage === 1) {
+          $('button.previousPage').prop('disabled', true);
+        }
+        // 最後一頁不能在按下一頁 button
+        if (dataCurrentPage === dataPageTotal) {
+          $('button.nextPage').prop('disabled', true);
+        }
+
+        // 更新 x 筆資料
+        $('span.dataCountTotal').html(dataCountTotal);
+        // 更新 共 x 頁
+        $('span.dataPageTotal').html(dataPageTotal);
+        // 更新 每頁 x 筆
+        $('span.dataPerPage').html(dataPerPage);
+        // 更新 表格內容
+        $('table.dataTable tbody').html(dataTableTbodyContent)
+        // 更新 目前頁數
+        $('form input[name="page"]').val(dataCurrentPage)
+        // 移除 loading
+        divLoading.addClass('d-none');
+        // 顯示 表格內容
+        divContainer.removeClass('d-none');
       },
       // reject
       function (response) {
-
+        divLoading.addClass('d-none');
+        divFailure.removeClass('d-none')
       },
       // pending
       function (response) {
@@ -58,7 +134,7 @@
     );
   }
 
-  // ajax 取得 api 資料
+  // ajax 取得所有資料
   function ajaxRestCountries() {
 
     const ajaxDefer = $.Deferred();
@@ -77,35 +153,94 @@
 
     return ajaxDefer.promise();
   }
+
+  // 切換頁數
+  function changePage(changeType) {
+
+    const inputPage = $('form input[name="page"]');
+    let currentPage = parseInt(inputPage.val());
+    let toPage;
+
+    if (changeType === 'next') {
+      toPage = currentPage + 1;
+    } else if (changeType === 'previous') {
+      toPage = currentPage - 1;
+    }
+    inputPage.val(toPage)
+    $('form').submit();
+  }
+
 </script>
 <div class="p-2">
-  <h1>Interview Yi Space x Countries Information</h1>
-  <div class="h3 m-0 p-o dataLoading">
-    Loading, Please wait ...
+  <h1 class="mb-4">
+    <a href="/">Interview Yi Space x Countries Information</a>
+  </h1>
+  <div class="Loading">
+    <div class="h3 m-0 mb-4 p-0">
+      Loading, Please wait ...
+    </div>
   </div>
-  <table class="dataTable table w-auto d-none">
-    <thead class="thead-dark">
-    <tr>
-      <th>#</th>
-      <th>flag</th>
-      <th>name</th>
-      <th>alpha2Code</th>
-      <th>alpha3Code</th>
-      <th>nativeName</th>
-      <th>altSpellings</th>
-      <th>callingCodes</th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr class="">
-    </tr>
-    </tbody>
-  </table>
+  <div class="Failure d-none">
+    <div class="row m-0 p-0">
+      <div class="h3 m-0 mb-4 p-0">
+        Get Data Failure ..., Please refresh page or try again later ...
+      </div>
+    </div>
+  </div>
+  <div class="Container d-none px-2">
+    <form method="get">
+      <div class="dataPagination mb-3">
+        <div class="row m-0 p-0">
+          <div class="col m-0 p-0" style="line-height: 2rem;">
+            <span class="dataCountTotal"></span> 筆資料 | 每頁 <span class="dataPerPage">30</span> 筆 | 共 <span
+            class="dataPageTotal"></span> 頁
+          </div>
+          <div class="col-auto m-0 p-0 text-right" style="width: 200px;">
+            <div class="input-group">
+              <div class="input-group-prepend" id="button-addon3">
+                <button class="btn btn-outline-secondary previousPage" type="button" onclick="changePage('previous')">
+                  ＜
+                </button>
+              </div>
+              <input type="number" name="page" class="form-control text-center border-dark" readonly aria-label="page"
+                     size="3">
+              <div class="input-group-append" id="button-addon4">
+                <button class="btn btn-outline-secondary nextPage" type="button" onclick="changePage('next')"> ＞
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <table class="dataTable table">
+        <thead class="thead-dark">
+        <tr>
+          <th>#</th>
+          <th>flag</th>
+          <th>
+            <span class="mr-3">name</span>
+            <button class="btn btn-sm btn-light float-right pt-1" style="line-height: 1rem;">sort</button>
+          </th>
+          <th>alpha2Code</th>
+          <th>alpha3Code</th>
+          <th>nativeName</th>
+          <th>altSpellings</th>
+          <th>callingCodes</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr class="">
+        </tr>
+        </tbody>
+      </table>
+    </form>
+  </div>
 </div>
 
 <script>
+  // todo remove
   $(function () {
-    window.setTimeout(getListData, 1000); // 5 seconds
+    window.setTimeout(getData, 500); // 5 seconds
   });
 </script>
 </body>
