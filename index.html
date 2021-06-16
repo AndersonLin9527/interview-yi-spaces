@@ -5,10 +5,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <!-- jQuery 3.6.0 -->
-  <script src="plugin/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+  <script src="/plugin/jquery-3.6.0/jquery-3.6.0.min.js"></script>
   <!-- Bootstrap CSS & JS -->
   <link rel="stylesheet" href="plugin/bootstrap-4.6.0/css/bootstrap.min.css">
-  <script src="plugin/bootstrap-4.6.0/js/bootstrap.bundle.min.js"></script>
+  <script src="/plugin/bootstrap-4.6.0/js/bootstrap.bundle.min.js"></script>
   <title>Interview Yi Space x Countries Information</title>
   <style>
     table.dataTable thead tr th,
@@ -54,18 +54,40 @@
       // resolve
       function (response) {
 
+        // 資料排序
+        let sortType = getURLParameter('sortType');
+        if (typeof sortType === 'undefined') {
+          sortType = 'asc';
+        } else if (sortType !== 'asc' && sortType !== 'desc') {
+          sortType = 'asc';
+        }
+        if (sortType === 'asc') {
+          response = response.sort(function (a, b) {
+            let x = a['name'];
+            let y = b['name'];
+            return (x > y) ? 1 : (x < y) ? -1 : 0;
+          });
+        } else if (sortType === 'desc') {
+          response = response.sort(function (a, b) {
+            let x = a['name'];
+            let y = b['name'];
+            return (x > y) ? -1 : (x < y) ? 1 : 0;
+          });
+        }
+        $('form input[name="sortType"]').val(sortType);
+        // 切換顯示 sortType button
+        $('button.sortType').addClass('d-none');
+        $('button.sortType.' + sortType).removeClass('d-none');
+
+
         // 資料計數
         let dataCount = 0;
-
         // 資料筆數
         let dataCountTotal = response.length;
-
         // 資料每頁筆數
         const dataPerPage = 25;
-
         // 資料總頁數
         const dataPageTotal = Math.ceil(dataCountTotal / dataPerPage);
-
         // 目前頁數
         let dataCurrentPage = getURLParameter('page');
         if (typeof dataCurrentPage === 'undefined') {
@@ -85,10 +107,6 @@
         }
         // 資料結束
         const dataClose = dataStart + dataPerPage - 1;
-
-        // todo 資料排序
-        // response = response.sort();
-        // response = response.reverse();
 
         let dataTableTbodyContent = null;
 
@@ -199,6 +217,14 @@
     $('form').submit();
   }
 
+  // 切換排序
+  function changeSortType(sortType) {
+    // const currentSortType = $('form input[name="sortType"]');
+    // console.log(currentSortType);
+    $('form input[name="sortType"]').val(sortType);
+    $('form').submit();
+  }
+
 </script>
 <div class="p-2">
   <h1 class="mb-4">
@@ -222,6 +248,7 @@
   </div>
   <div class="Container d-none px-2">
     <form method="get">
+      <!-- 搜尋 -->
       <div class="dataSearch mb-3">
         <div class="row m-0 p-0">
           <div class="col-6 m-0 p-0">
@@ -234,6 +261,7 @@
           </div>
         </div>
       </div>
+      <!-- 分頁 -->
       <div class="dataPagination mb-3">
         <div class="row m-0 p-0">
           <div class="col m-0 p-0" style="line-height: 2rem;">
@@ -264,7 +292,18 @@
           <th>flag</th>
           <th>
             <span class="mr-3">name</span>
-            <button class="btn btn-sm btn-light float-right pt-1" style="line-height: 1rem;">sort</button>
+            <!-- desc-->
+            <button class="btn btn-sm btn-light float-right pt-1 sortType asc" style="line-height: 1rem;" type="button"
+                    onclick="changeSortType('desc')">
+              sort ↓
+            </button>
+            <!-- asc-->
+            <button class="d-none btn btn-sm btn-light float-right pt-1 sortType desc" style="line-height: 1rem;"
+                    type="button"
+                    onclick="changeSortType('asc')">
+              sort ↑
+            </button>
+            <input type="hidden" name="sortType" value="asc">
           </th>
           <th>alpha2Code</th>
           <th>alpha3Code</th>
