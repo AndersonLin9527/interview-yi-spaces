@@ -33,7 +33,18 @@
   // 取得 列表資料
   function getData() {
 
-    const deferAjax = ajaxRestCountries();
+    // 搜尋 name 關鍵字
+    const keyword = getURLParameter('keyword');
+
+    let deferAjax;
+
+    if (typeof keyword === 'undefined' || keyword === '') {
+      deferAjax = ajaxRestCountries();
+    } else {
+      // 更新 搜尋關鍵字
+      $('form input[name="keyword"]').val(keyword)
+      deferAjax = ajaxRestCountriesSearch(keyword);
+    }
 
     const divLoading = $('div.Loading');
     const divFailure = $('div.Failure');
@@ -57,7 +68,7 @@
 
         // 目前頁數
         let dataCurrentPage = getURLParameter('page');
-        if (typeof dataCurrentPage === "undefined") {
+        if (typeof dataCurrentPage === 'undefined') {
           dataCurrentPage = 1
         } else {
           dataCurrentPage = parseInt(dataCurrentPage);
@@ -126,7 +137,11 @@
       // reject
       function (response) {
         divLoading.addClass('d-none');
-        divFailure.removeClass('d-none')
+        divFailure.removeClass('d-none');
+        const errorMessage = response.responseJSON.message;
+        if (typeof errorMessage !== 'undefined') {
+          divFailure.find('.errorMessage').html(errorMessage);
+        }
       },
       // pending
       function (response) {
@@ -134,11 +149,9 @@
     );
   }
 
-  // ajax 取得所有資料
+  // api 取得所有資料
   function ajaxRestCountries() {
-
     const ajaxDefer = $.Deferred();
-
     $.ajax({
       url: 'https://restcountries.eu/rest/v2/all',
       method: 'get',
@@ -150,13 +163,29 @@
         ajaxDefer.reject(response);
       }
     });
+    return ajaxDefer.promise();
+  }
 
+  // api 搜尋國名資料
+  function ajaxRestCountriesSearch(keyword) {
+    const keywordEncode = encodeURIComponent(keyword);
+    const ajaxDefer = $.Deferred();
+    $.ajax({
+      url: 'https://restcountries.eu/rest/v2/name/' + keywordEncode,
+      method: 'get',
+      data: null,
+      success: function (response) {
+        ajaxDefer.resolve(response);
+      },
+      error: function (response) {
+        ajaxDefer.reject(response);
+      }
+    });
     return ajaxDefer.promise();
   }
 
   // 切換頁數
   function changePage(changeType) {
-
     const inputPage = $('form input[name="page"]');
     let currentPage = parseInt(inputPage.val());
     let toPage;
@@ -181,14 +210,30 @@
     </div>
   </div>
   <div class="Failure d-none">
-    <div class="row m-0 p-0">
-      <div class="h3 m-0 mb-4 p-0">
-        Get Data Failure ..., Please refresh page or try again later ...
+    <div class="row m-0 mb-4 p-0">
+      <div class="h3 m-0 p-0">
+        <div class="mb-3">Get Data Failure (<span class="errorMessage text-danger"></span>) ...</div>
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item h5"><a href="/">Back to home</a></li>
+          <li class="list-group-item h5"><a href="#" onclick="location.reload();">Refresh page</a></li>
+        </ul>
       </div>
     </div>
   </div>
   <div class="Container d-none px-2">
     <form method="get">
+      <div class="dataSearch mb-3">
+        <div class="row m-0 p-0">
+          <div class="col-6 m-0 p-0">
+            <div class="input-group">
+              <input type="text" name="keyword" class="form-control" aria-label="keyword" placeholder="搜尋 name...">
+              <div class="input-group-append">
+                <button class="btn btn-primary" type="submit" onclick="">搜尋</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="dataPagination mb-3">
         <div class="row m-0 p-0">
           <div class="col m-0 p-0" style="line-height: 2rem;">
@@ -197,14 +242,14 @@
           </div>
           <div class="col-auto m-0 p-0 text-right" style="width: 200px;">
             <div class="input-group">
-              <div class="input-group-prepend" id="button-addon3">
+              <div class="input-group-prepend">
                 <button class="btn btn-outline-secondary previousPage" type="button" onclick="changePage('previous')">
                   ＜
                 </button>
               </div>
               <input type="number" name="page" class="form-control text-center border-dark" readonly aria-label="page"
                      size="3">
-              <div class="input-group-append" id="button-addon4">
+              <div class="input-group-append">
                 <button class="btn btn-outline-secondary nextPage" type="button" onclick="changePage('next')"> ＞
                 </button>
               </div>
@@ -229,8 +274,6 @@
         </tr>
         </thead>
         <tbody>
-        <tr class="">
-        </tr>
         </tbody>
       </table>
     </form>
