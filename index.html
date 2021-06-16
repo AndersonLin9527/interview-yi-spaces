@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <!-- jQuery 3.6.0 -->
+  <script src="plugin/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+  <!-- Bootstrap CSS & JS -->
+  <link rel="stylesheet" href="plugin/bootstrap-4.6.0/css/bootstrap.min.css">
+  <script src="plugin/bootstrap-4.6.0/js/bootstrap.bundle.min.js"></script>
+  <title>Interview Yi Space x Countries Information</title>
+</head>
+<body>
+<script>
+  // 選擇 物流廠商
+  function getListData() {
+
+    const deferAjax = ajaxRestCountries();
+
+    const dataLoading = $('div.dataLoading');
+
+    const dataTable = $('table.dataTable');
+
+    $.when(deferAjax).then(
+      // resolve
+      function (response) {
+        dataLoading.addClass('d-none');
+        dataTable.removeClass('d-none');
+        const dataTableTbody = dataTable.find('tbody');
+        let dataTableTbodyContent = null;
+        // console.log(dataTableTbody);
+        // console.log(response);
+        $.each(response, function (index, json) {
+          // console.log("#" + json.week + ", period: " + json.start + " to " + json.end);
+          console.log(index);
+          console.log(json);
+          dataTableTbodyContent += '<tr class="data">';
+          dataTableTbodyContent += '  <td>' + index + '</td>';
+          dataTableTbodyContent += '  <td><img width="50" src="' + json.flag + '"></td>';
+          dataTableTbodyContent += '  <td>' + json.name + '</td>';
+          dataTableTbodyContent += '  <td>' + json.alpha2Code + '</td>';
+          dataTableTbodyContent += '  <td>' + json.alpha3Code + '</td>';
+          dataTableTbodyContent += '  <td>' + json.nativeName + '</td>';
+          dataTableTbodyContent += '  <td>' + json.altSpellings + '</td>';
+          dataTableTbodyContent += '  <td>' + json.callingCodes + '</td>';
+          dataTableTbodyContent += '</tr>';
+        });
+        dataTableTbody.html(dataTableTbodyContent)
+      },
+      // reject
+      function (response) {
+
+      },
+      // pending
+      function (response) {
+      }
+    );
+  }
+
+  // ajax 取得 api 資料
+  function ajaxRestCountries() {
+
+    const ajaxDefer = $.Deferred();
+
+    $.ajax({
+      url: 'https://restcountries.eu/rest/v2/all',
+      method: 'get',
+      data: null,
+      success: function (response) {
+        ajaxDefer.resolve(response);
+      },
+      error: function (response) {
+        ajaxDefer.reject(response);
+      }
+    });
+
+    return ajaxDefer.promise();
+  }
+</script>
+<div class="p-2">
+  <h1>Interview Yi Space x Countries Information</h1>
+  <div class="h3 m-0 p-o dataLoading">
+    Loading, Please wait ...
+  </div>
+  <table class="dataTable table w-auto d-none">
+    <thead class="thead-dark">
+    <tr>
+      <th>#</th>
+      <th>flag</th>
+      <th>name</th>
+      <th>alpha2Code</th>
+      <th>alpha3Code</th>
+      <th>nativeName</th>
+      <th>altSpellings</th>
+      <th>callingCodes</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="">
+    </tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  $(function () {
+    window.setTimeout(getListData, 1000); // 5 seconds
+  });
+</script>
+</body>
+</html>
