@@ -274,7 +274,7 @@
     const countryNameEncode = encodeURIComponent(countryName);
     const ajaxDefer = $.Deferred();
     $.ajax({
-      url: 'https://restcountries.eu/rest/v2/name/' + countryNameEncode + '?fullText=true',
+      url: 'https://restcountries.eu/rest/v2/name/' + countryNameEncode + 'gg?fullText=true',
       method: 'get',
       data: null,
       success: function (response) {
@@ -394,7 +394,7 @@
             Loading, Please wait ...
           </div>
           <div class="modalFailure d-none h6 m-0 mb-4 p-0">
-            <div class="mb-3">Get Data Failure (<span class="errorMessage text-danger"></span>) ...</div>
+            <div class="mb-3 text-danger">Get Data Failure ...</div>
           </div>
           <div class="modalTable d-none">
             <table class="table table-sm table-borderless w-auto">
