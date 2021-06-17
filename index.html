@@ -19,19 +19,19 @@
 </head>
 <body>
 <script>
-  function getURLParameter(sParam) {
-    const sPageURL = window.location.search.substring(1);
-    const sURLVariables = sPageURL.split('&');
-    for (let i = 0; i < sURLVariables.length; i++) {
-      const sParameterName = sURLVariables[i].split('=');
-      if (sParameterName[0] === sParam) {
-        return sParameterName[1];
+  function getURLParameter(paramName) {
+    const url = window.location.search.substring(1);
+    const urlParameters = url.split('&');
+    for (let i = 0; i < urlParameters.length; i++) {
+      const urlParameterName = urlParameters[i].split('=');
+      if (urlParameterName[0] === paramName) {
+        return urlParameterName[1];
       }
     }
   }
 
-  // 取得 列表資料
-  function getData() {
+  // 取得 國家列表
+  function getCountries() {
 
     // 搜尋 name 關鍵字
     const keyword = getURLParameter('keyword');
@@ -79,7 +79,6 @@
         $('button.sortType').addClass('d-none');
         $('button.sortType.' + sortType).removeClass('d-none');
 
-
         // 資料計數
         let dataCount = 0;
         // 資料筆數
@@ -116,7 +115,11 @@
             dataTableTbodyContent += '<tr class="data">';
             dataTableTbodyContent += '  <td>' + dataCount + '</td>';
             dataTableTbodyContent += '  <td><img alt="flag" width="50" src="' + json.flag + '"></td>';
-            dataTableTbodyContent += '  <td>' + json.name + '</td>';
+            dataTableTbodyContent += '  <td class="text-nowrap">';
+            dataTableTbodyContent += '    <button type="button" class="btn btn-link text-left" onclick="getCountry($(this))" data-name="' + json.name + '">';
+            dataTableTbodyContent += '      ' + json.name;
+            dataTableTbodyContent += '    </button>';
+            dataTableTbodyContent += '  </td>';
             dataTableTbodyContent += '  <td>' + json.alpha2Code + '</td>';
             dataTableTbodyContent += '  <td>' + json.alpha3Code + '</td>';
             dataTableTbodyContent += '  <td>' + json.nativeName + '</td>';
@@ -167,7 +170,7 @@
     );
   }
 
-  // api 取得所有資料
+  // api 取得國家資料
   function ajaxRestCountries() {
     const ajaxDefer = $.Deferred();
     $.ajax({
@@ -219,10 +222,69 @@
 
   // 切換排序
   function changeSortType(sortType) {
-    // const currentSortType = $('form input[name="sortType"]');
-    // console.log(currentSortType);
     $('form input[name="sortType"]').val(sortType);
     $('form').submit();
+  }
+
+  // 取得 國家詳細資料
+  function getCountry(jqDomButton) {
+    const countryName = jqDomButton.data('name');
+    const modal = $('div.modal.countryDetail');
+    const modalCloseButtons = modal.find('button.modalClose');
+    const modalLoading = modal.find('.modalLoading');
+    const modalFailure = modal.find('.modalFailure');
+    const modalTable = modal.find('.modalTable');
+
+    modalLoading.removeClass('d-none');
+    modalFailure.addClass('d-none');
+    modalTable.addClass('d-none');
+    modalCloseButtons.addClass('d-none');
+
+    modal.find('.modal-title').html(countryName);
+    modalCloseButtons.addClass('d-none');
+    modal.modal('show')
+
+    const deferAjax = ajaxRestCountry(countryName);
+
+    $.when(deferAjax).then(
+      // resolve
+      function (response) {
+        let responseData = response[0];
+        modalTable.find('td.capital').html(responseData.capital);
+        modalTable.find('td.population').html(responseData.population);
+        modalTable.find('td.region').html(responseData.region);
+        modalLoading.addClass('d-none');
+        modalTable.removeClass('d-none');
+        modalCloseButtons.removeClass('d-none');
+      },
+      // reject
+      function (response) {
+        modalLoading.addClass('d-none');
+        modalFailure.removeClass('d-none');
+        modalCloseButtons.removeClass('d-none');
+      },
+      // pending
+      function (response) {
+      }
+    );
+  }
+
+  // api 國家詳細資料
+  function ajaxRestCountry(countryName) {
+    const countryNameEncode = encodeURIComponent(countryName);
+    const ajaxDefer = $.Deferred();
+    $.ajax({
+      url: 'https://restcountries.eu/rest/v2/name/' + countryNameEncode + '?fullText=true',
+      method: 'get',
+      data: null,
+      success: function (response) {
+        ajaxDefer.resolve(response);
+      },
+      error: function (response) {
+        ajaxDefer.reject(response);
+      }
+    });
+    return ajaxDefer.promise();
   }
 
 </script>
@@ -317,12 +379,53 @@
       </table>
     </form>
   </div>
+  <!-- modal -->
+  <div class="modal fade countryDetail" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Modal title</h5>
+          <button type="button" class="modalClose close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="modalLoading h6 m-0 mb-4 p-0">
+            Loading, Please wait ...
+          </div>
+          <div class="modalFailure d-none h6 m-0 mb-4 p-0">
+            <div class="mb-3">Get Data Failure (<span class="errorMessage text-danger"></span>) ...</div>
+          </div>
+          <div class="modalTable d-none">
+            <table class="table table-sm table-borderless w-auto">
+              <tbody>
+              <tr>
+                <th class="pr-5">capital</th>
+                <td class="capital pl-5">El Aaiún</td>
+              </tr>
+              <tr>
+                <th class="pr-5">population</th>
+                <td class="population pl-5">510713</td>
+              </tr>
+              <tr>
+                <th class="pr-5">region</th>
+                <td class="region pl-5">Africa</td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="modalClose btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
-  // todo remove
   $(function () {
-    window.setTimeout(getData, 500); // 5 seconds
+    getCountries();
   });
 </script>
 </body>
